@@ -20,7 +20,7 @@ for(@modules) {
 }
 
 #Software version.
-my $version = '1.2';
+my $version = '1.2.1';
 
 #Path to Bowtie genome index.
 my $path_to_bowtie_index;
@@ -758,6 +758,13 @@ Building transcriptome index ...
 	  $tag2 = $array[11];
 	  $tag3 = $array[12];
 	  $tag4 = $array[13];
+	  #Stranded library: restore minus-strand alignments to 5'->3' sense orientation
+	  #(transcript references are built from plus-strand genomic sequence, so reads
+	  #from minus-strand loci align reverse and SEQ is stored reverse-complemented).
+	  if($strand_specific && $array[1] eq '16'){
+	    $sequence = revcomp($sequence);
+	    $quality = reverse($quality);
+	  }
 
 	  if($first_time and $transcript_name ne '*'){ $prev_id = $read_id; $first_time = 0; }
 
@@ -1100,6 +1107,18 @@ sub split_info {
   
 }
 
+#Reverse complement a nucleotide sequence. Used to restore minus-strand
+#alignments (SAM FLAG 0x10) to 5'->3' sense orientation relative to the mature
+#transcript. Small RNA-seq libraries are strand-specific, so every read is sense;
+#the aligner stores SEQ in reference (plus-strand) orientation, hence minus-strand
+#loci must be reverse-complemented back to recover the sequenced molecule.
+sub revcomp {
+  my $seq = shift;
+  $seq = reverse $seq;
+  $seq =~ tr/ACGTacgtNn/TGCAtgcaNn/;
+  return $seq;
+}
+
 #Helper function for generating info.
 sub generate_info {
 
@@ -1128,6 +1147,14 @@ my @sam_elements = split('\t', $line);
 	my $stop_pos = $start_pos + $read_length -1;
 	my $read = $sam_elements[9];
  	my $quality = $sam_elements[10];
+ 	#Stranded library: restore minus-strand alignments to 5'->3' sense orientation.
+ 	#The aligner stores SEQ in reference (plus-strand) orientation and sets FLAG 0x10
+ 	#for reverse alignments, so reverse-complement SEQ (and reverse QUAL to keep
+ 	#per-base correspondence). Coordinates and counts are unaffected.
+ 	if($strand_specific && $sam_elements[1] eq '16'){
+ 	  $read = revcomp($read);
+ 	  $quality = reverse($quality);
+ 	}
  	
  	my $tag1 = $sam_elements[5];
  	my $tag2 = $sam_elements[11];
