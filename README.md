@@ -195,3 +195,20 @@ Clusters of unannotated reads will be merged if the distance between them is equ
 
 
 </table>
+
+## Changelog
+
+### 1.2.1
+
+- **Minus-strand isomiR sequences are now reported in 5'->3' sense orientation.**
+  In strand-specific mode (`-s yes`), reads aligning to the minus strand (SAM
+  FLAG `0x10`) previously had their `SEQ` written to `*_Manatee_isomirs.tsv`
+  verbatim, i.e. in reference (plus-strand) orientation. Because small RNA-seq
+  libraries are strand-specific (every read is sense relative to the mature
+  transcript), this reverse-complemented the sequenced molecule for minus-strand
+  loci and split a mature miRNA's isomiRs across sense and reverse-complement
+  rows. Manatee now reverse-complements `SEQ` (and reverses `QUAL`) for FLAG
+  `0x10` records in both the genomic and transcriptome alignment paths, so the
+  reported isomiR sequence matches the mature orientation. Read assignment,
+  coordinates and all reported counts are unchanged; only the isomiR sequence
+  orientation is corrected. Non strand-specific runs (`-s no`) are unaffected.
